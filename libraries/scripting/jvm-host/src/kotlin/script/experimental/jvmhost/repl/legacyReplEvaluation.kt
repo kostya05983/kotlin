@@ -38,34 +38,34 @@ class JvmReplEvaluator(
             ?: return ReplEvalResult.Error.CompileTime("Unable to access compiled script: ${compileResult.data}")
 
         val currentConfiguration = ScriptEvaluationConfiguration(baseScriptEvaluationConfiguration) {
-            previousSnippets(evalState.history.map { it.item.instance })
+            previousSnippets(evalState.history.map { it.item }.asIterable())
         }
 
         val res = runBlocking { scriptEvaluator(compiledScript, currentConfiguration) }
 
         when (res) {
             is ResultWithDiagnostics.Success -> when (val retVal = res.value.returnValue) {
-                is ResultValue.Value -> ReplEvalResult.ValueResult(retVal.name, retVal.value, retVal.type)
-                else -> ReplEvalResult.UnitResult()
+                is ResultValue.Value -> {
+                    evalState.history.push(compileResult.lineId, retVal.scriptInstance)
+                    ReplEvalResult.ValueResult(retVal.name, retVal.value, retVal.type)
+                }
+                is ResultValue.UnitValue -> {
+                    evalState.history.push(compileResult.lineId, retVal.scriptInstance)
+                    ReplEvalResult.UnitResult()
+                }
+                else -> throw IllegalStateException("Expecting value with script instance, got $retVal")
             }
             else -> ReplEvalResult.Error.Runtime(res.reports.joinToString("\n") { it.message })
         }
     }
 }
 
-data class JvmEvalClassWithInstanceAndLoader(
-    val klass: KClass<*>,
-    val instance: Any?,
-    val classLoader: ClassLoader?,
-    val invokeWrapper: InvokeWrapper?
-)
-
 open class JvmReplEvaluatorState(
     scriptEvaluationConfiguration: ScriptEvaluationConfiguration,
     override val lock: ReentrantReadWriteLock = ReentrantReadWriteLock()
-) : IReplStageState<JvmEvalClassWithInstanceAndLoader> {
+) : IReplStageState<Any> {
 
-    override val history: IReplStageHistory<JvmEvalClassWithInstanceAndLoader> = BasicReplStageHistory(lock)
+    override val history: IReplStageHistory<Any> = BasicReplStageHistory(lock)
 
     override val currentGeneration: Int get() = (history as BasicReplStageHistory<*>).currentGeneration.get()
 

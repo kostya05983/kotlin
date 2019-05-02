@@ -108,6 +108,11 @@ sealed class ResultValue {
         override fun toString(): String = "$name: $type = $value"
     }
 
+    class UnitValue(val scriptInstance: Any) : ResultValue() {
+        override fun toString(): String = "Unit"
+    }
+
+    // TODO: obsolete it, use differently named value in the saving evaluators
     object Unit : ResultValue()
 }
 
