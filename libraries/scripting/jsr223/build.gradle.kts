@@ -10,6 +10,7 @@ dependencies {
     compile(kotlinStdlib())
     compile(project(":kotlin-scripting-common"))
     compile(project(":kotlin-scripting-jvm"))
+    compile(project(":kotlin-scripting-jvm-host"))
     compile(project(":kotlin-script-util"))
     compile(project(":kotlin-scripting-compiler"))
     compile(project(":kotlin-scripting-compiler-impl"))
