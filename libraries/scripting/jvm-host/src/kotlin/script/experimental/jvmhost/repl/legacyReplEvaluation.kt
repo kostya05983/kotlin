@@ -9,11 +9,10 @@ import kotlinx.coroutines.runBlocking
 import org.jetbrains.kotlin.cli.common.repl.*
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.write
-import kotlin.reflect.KClass
 import kotlin.script.experimental.api.*
+import kotlin.script.experimental.jvm.BasicJvmScriptEvaluator
 import kotlin.script.experimental.jvm.baseClassLoader
 import kotlin.script.experimental.jvm.impl.KJvmCompiledScript
-import kotlin.script.experimental.jvm.impl.getConfigurationWithClassloader
 import kotlin.script.experimental.jvm.jvm
 
 /**
@@ -21,7 +20,7 @@ import kotlin.script.experimental.jvm.jvm
  */
 class JvmReplEvaluator(
     val baseScriptEvaluationConfiguration: ScriptEvaluationConfiguration,
-    val scriptEvaluator: ScriptEvaluator
+    val scriptEvaluator: ScriptEvaluator = BasicJvmScriptEvaluator()
 ) : ReplEvaluator {
 
     override fun createState(lock: ReentrantReadWriteLock): IReplStageState<*> =
@@ -37,8 +36,16 @@ class JvmReplEvaluator(
         val compiledScript = (compileResult.data as? KJvmCompiledScript<*>)
             ?: return ReplEvalResult.Error.CompileTime("Unable to access compiled script: ${compileResult.data}")
 
+        val lastSnippetInstance = evalState.history.peek()?.item
         val currentConfiguration = ScriptEvaluationConfiguration(baseScriptEvaluationConfiguration) {
-            previousSnippets(evalState.history.map { it.item }.asIterable())
+            if (evalState.history.isNotEmpty()) {
+                previousSnippets.put(evalState.history.map { it.item })
+            }
+            if (lastSnippetInstance != null) {
+                jvm {
+                    baseClassLoader(lastSnippetInstance::class.java.classLoader)
+                }
+            }
         }
 
         val res = runBlocking { scriptEvaluator(compiledScript, currentConfiguration) }
@@ -47,7 +54,11 @@ class JvmReplEvaluator(
             is ResultWithDiagnostics.Success -> when (val retVal = res.value.returnValue) {
                 is ResultValue.Value -> {
                     evalState.history.push(compileResult.lineId, retVal.scriptInstance)
-                    ReplEvalResult.ValueResult(retVal.name, retVal.value, retVal.type)
+                    // TODO: the latter check is temporary while the result is used to return the instance too
+                    if (retVal.type.isNotBlank())
+                        ReplEvalResult.ValueResult(retVal.name, retVal.value, retVal.type)
+                    else
+                        ReplEvalResult.UnitResult()
                 }
                 is ResultValue.UnitValue -> {
                     evalState.history.push(compileResult.lineId, retVal.scriptInstance)

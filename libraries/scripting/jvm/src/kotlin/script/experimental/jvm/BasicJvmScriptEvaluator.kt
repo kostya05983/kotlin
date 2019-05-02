@@ -73,7 +73,9 @@ open class BasicJvmScriptEvaluator : ScriptEvaluator {
         val args = ArrayList<Any?>()
 
         refinedEvalConfiguration[ScriptEvaluationConfiguration.previousSnippets]?.let {
-            args.add(it.toTypedArray())
+            if (it.isNotEmpty()) {
+                args.add(it.toTypedArray())
+            }
         }
 
         refinedEvalConfiguration[ScriptEvaluationConfiguration.constructorArgs]?.let {

@@ -62,7 +62,6 @@ interface IReplStageState<T> {
             else throw IllegalArgumentException("$this is not an expected instance of IReplStageState")
 
     fun dispose() {
-        history.reset()
     }
 }
 

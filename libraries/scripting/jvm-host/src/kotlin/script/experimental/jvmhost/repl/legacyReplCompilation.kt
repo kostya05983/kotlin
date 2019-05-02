@@ -16,7 +16,6 @@ import kotlin.script.experimental.api.*
 import kotlin.script.experimental.host.ScriptingHostConfiguration
 import kotlin.script.experimental.jvm.defaultJvmScriptingHostConfiguration
 import kotlin.script.experimental.jvmhost.impl.KJvmReplCompilerImpl
-import kotlin.script.experimental.jvmhost.impl.toSourceCode
 import kotlin.script.experimental.jvmhost.impl.withDefaults
 
 /**
@@ -35,7 +34,7 @@ class JvmReplCompiler(
         val compilation = replCompilerState.getCompilationState(scriptCompilationConfiguration)
         val res =
             replCompilerProxy.checkSyntax(
-                codeLine.toSourceCode(),
+                codeLine.toSourceCode(scriptCompilationConfiguration),
                 compilation.baseScriptCompilationConfiguration,
                 compilation.environment.project
             )
@@ -50,7 +49,7 @@ class JvmReplCompiler(
     override fun compile(state: IReplStageState<*>, codeLine: ReplCodeLine): ReplCompileResult = state.lock.write {
         val replCompilerState = state.asState(JvmReplCompilerState::class.java)
         val compilation = replCompilerState.getCompilationState(scriptCompilationConfiguration)
-        val snippet = codeLine.toSourceCode()
+        val snippet = codeLine.toSourceCode(scriptCompilationConfiguration)
         val snippetId = ReplSnippetIdImpl(codeLine.no, codeLine.generation, snippet)
         when (val res = replCompilerProxy.compileReplSnippet(compilation, snippet, snippetId, replCompilerState.history)) {
             is ResultWithDiagnostics.Success ->
@@ -140,3 +139,15 @@ class JvmReplCompilerState(
         val analyzerEngine: ReplCodeAnalyzer
     }
 }
+
+internal class SourceCodeFromReplCodeLine(
+    val codeLine: ReplCodeLine,
+    compilationConfiguration: ScriptCompilationConfiguration
+) : SourceCode {
+    override val text: String get() = codeLine.code
+    override val name: String = "${makeScriptBaseName(codeLine)}.${compilationConfiguration[ScriptCompilationConfiguration.fileExtension]}"
+    override val locationId: String? = null
+}
+
+internal fun ReplCodeLine.toSourceCode(compilationConfiguration: ScriptCompilationConfiguration): SourceCode =
+    SourceCodeFromReplCodeLine(this, compilationConfiguration)

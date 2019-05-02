@@ -10,7 +10,10 @@ import com.intellij.openapi.project.Project
 import org.jetbrains.kotlin.cli.common.environment.setIdeaIoUseFallback
 import org.jetbrains.kotlin.cli.common.messages.AnalyzerWithCompilerReport
 import org.jetbrains.kotlin.cli.common.messages.MessageCollectorBasedReporter
-import org.jetbrains.kotlin.cli.common.repl.*
+import org.jetbrains.kotlin.cli.common.repl.IReplStageHistory
+import org.jetbrains.kotlin.cli.common.repl.LineId
+import org.jetbrains.kotlin.cli.common.repl.ReplCodeLine
+import org.jetbrains.kotlin.cli.common.repl.scriptResultFieldName
 import org.jetbrains.kotlin.cli.jvm.compiler.KotlinCoreEnvironment
 import org.jetbrains.kotlin.codegen.ClassBuilderFactories
 import org.jetbrains.kotlin.codegen.CompilationErrorHandler
@@ -137,10 +140,3 @@ internal class ReplCompilationState(val context: SharedScriptCompilationContext)
 internal fun makeReplCodeLine(id: ReplSnippetId, code: SourceCode): ReplCodeLine =
     ReplCodeLine(id.no, id.generation, code.text)
 
-internal class SourceCodeFromReplCodeLine(val codeLine: ReplCodeLine) : SourceCode {
-    override val text: String get() = codeLine.code
-    override val name: String = makeScriptBaseName(codeLine)
-    override val locationId: String? = null
-}
-
-internal fun ReplCodeLine.toSourceCode(): SourceCode = SourceCodeFromReplCodeLine(this)
