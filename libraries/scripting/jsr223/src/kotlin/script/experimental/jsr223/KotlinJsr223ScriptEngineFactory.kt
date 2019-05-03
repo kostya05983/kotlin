@@ -21,8 +21,6 @@ class KotlinJsr223JvmScriptEngineFactory : KotlinJsr223JvmScriptEngineFactoryBas
     override fun getScriptEngine(): ScriptEngine =
         KotlinJsr223ScriptEngine(
             this,
-            scriptCompilationClasspathFromContextOrStlib("kotlin-script-util.jar", wholeClasspath = true),
-            KotlinJsr223DefaultScript::class.qualifiedName!!,
             { ctx, types -> ScriptArgsWithTypes(arrayOf(ctx.getBindings(ScriptContext.ENGINE_SCOPE)), types ?: emptyArray()) },
             arrayOf(Bindings::class)
         )
